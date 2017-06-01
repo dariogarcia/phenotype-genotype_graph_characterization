@@ -28,8 +28,6 @@ def generate_path_code(G,path,p_id,common_genes,genotype_id):
 def compute_phenotype_paths(p_id):
     #build graph
     G_base = create_igraph_graph(phenotypes_ids, genotypes_ids, all_genes_ids, phenotypes_links, genotypes_links, genes_phenotypes_links, genes_genotypes_links, undirected=True)
-    #Find all the genes connected to it
-    linked_genes = [i[1] for i in genes_phenotypes_links if i[0]==phenotypes_ids[0]]
     #prepare structures storing the results
     connected_genotypes_data = Counter()
     counter_connected = 0
