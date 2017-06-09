@@ -220,6 +220,53 @@ def load_genotypes_genes_links(go_gen_path):
     return list(set(genotypes_genes_links))
 
 
+#Read genes Ids from phenotypes-gene and genotype-gene links
+#Returns list of unique genes Ids
+def load_all_genes(ph_gen_path, go_gen_path):
+    """
+    Obtains the list of genes ids which are linked to at least
+    one phenotype or genotype 
+
+    Args:
+        - ph_gen_path: path to the file linking phenotypes with genes
+            + Type: str
+        - go_gen_path: path to the file linking genotypes with genes
+            + Type: str
+    
+    Returns:
+        -genes_ids: list of unique genes linked in the ph or go ontologies
+            + Type: list[str]
+    """
+    #Check if the file is the expected one
+    import hashlib
+    if hashlib.md5(open(go_gen_path, 'rb').read()).hexdigest() != 'c943dcfbd6a6432761841304ff79d372':
+        print 'WARNING: Hash of file',go_gen_path,'does not match expected value.'
+        print 'WARNING: Parsing may not be correct.'
+    if hashlib.md5(open(ph_gen_path, 'rb').read()).hexdigest() != 'a5f7d8d8accbd1983cef710ebb586736':
+        print 'WARNING: Hash of file',ph_gen_path,'does not match expected value.'
+        print 'WARNING: Parsing may not be correct.'
+    #Process the file
+    genes_ids = set()
+    with open(ph_gen_path) as f:
+        #Skip the first line of syntax
+        next(f)
+        for line in f:
+            gene_id = line.split()[1]
+            if gene_id not in genes_ids:
+                genes_ids.add(gene_id)
+    #Read genes from genotype-gene links
+    genes_ids2 = set()
+    with open(go_gen_path,) as f:
+        for line in f:
+            #Skip comment lines
+            if line[0] == '!':
+                continue
+            gene_id = line.split()[2]
+            genes_ids2.add(gene_id)
+    #Return a list combining both sets, without repeated elements
+    return list(genes_ids.union(genes_ids2))
+
+
 def load_shared_genes(ph_gen_path, go_gen_path):
     """
     Obtains the list of genes ids which are shared by both
@@ -249,7 +296,7 @@ def load_shared_genes(ph_gen_path, go_gen_path):
     return list(genes_genotypes.intersection(genes_phenotypes))
 
 
-def load_data(po_path, go_path, ph_gen_path, go_gen_path):
+def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True):
     """
     Loads and returns the phenotypes, go-terms and genes of the PHO and GO ontologies.
     It also returns their links (P-P,P-Gn,GO-GO,GO-Gn)
@@ -283,12 +330,18 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path):
     """
     #TODO: There is redundancy in this call. load_shared_genes parses() the files
     #TODO: and so do load_phenotypes_genes_links() and load_genotypes_genes_links()
-    #Get list of genes ids shared by both ontologies
-    genes_ids = load_shared_genes(ph_gen_path, go_gen_path)
-    #Remove phenotype_gene links which relate to genes not linked by both ontologies
-    dirty_phenotype_gene_links = load_phenotypes_genes_links(ph_gen_path)
-    phenotype_gene_links = [l for l in dirty_phenotype_gene_links if l[1] in genes_ids]
-    #Remove genotype_gene links which relate to genes not linked by both ontologies
-    dirty_genotype_gene_links = load_genotypes_genes_links(go_gen_path)
-    genotype_gene_links = [l for l in dirty_genotype_gene_links if l[1] in genes_ids]
+    if only_shared_genes:
+        #Get list of genes ids shared by both ontologies
+        genes_ids = load_shared_genes(ph_gen_path, go_gen_path)
+        #Remove phenotype_gene links which relate to genes not linked by both ontologies
+        dirty_phenotype_gene_links = load_phenotypes_genes_links(ph_gen_path)
+        phenotype_gene_links = [l for l in dirty_phenotype_gene_links if l[1] in genes_ids]
+        #Remove genotype_gene links which relate to genes not linked by both ontologies
+        dirty_genotype_gene_links = load_genotypes_genes_links(go_gen_path)
+        genotype_gene_links = [l for l in dirty_genotype_gene_links if l[1] in genes_ids]
+    else:
+        genes_ids = load_all_genes(ph_gen_path, go_gen_path) 
+        phenotype_gene_links = load_phenotypes_genes_links(ph_gen_path)
+        genotype_gene_links = load_genotypes_genes_links(go_gen_path)
+        
     return load_phenotypes_ids(po_path), load_genotypes_ids(go_path), genes_ids, load_phenotype_phenotype_links(po_path), load_genotype_genotype_links(go_path), phenotype_gene_links, genotype_gene_links
