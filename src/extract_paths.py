@@ -5,12 +5,53 @@ import numpy as np
 import cPickle as pickle
 
 def persist_partial_results(total_results, list_elems, type_index):
+    """
+    Persists partial results on disk using numpy
+
+    Args:
+        -total_results: paths stored
+            +Type: 2D numpy.array. Rows are phenotype-genotype pairs. 
+                Columns are path types
+        - list_elems: list of computed pairs. Serves as row index.
+            +Type: list[(phenotype_id ,genotype_id)]
+        -type_index: dictionary of path type and column index
+            +Type: dict{path_type, index}
+
+    Returns:
+        None. Persists data.
+    """
+    #TODO: files are currently overwritten. Consider when this may not be desirable
     pickle.dump(total_results, open("../results/total_results.pkl", "wb"))
     pickle.dump(list_elems, open("../results/list_elems.pkl", "wb"))
     pickle.dump(type_index, open("../results/type_index.pkl", "wb"))
     return
     
 def merge_alternative_paths(total_results, list_elems, type_index, partial_list):
+    """
+    Given a set of paths already processed, and a new set, merge both.
+
+    Args:
+        -total_results: previous paths stored
+            +Type: 2D numpy.array. Rows are phenotype-genotype pairs. 
+                Columns are path types
+        - list_elems: list of computed pairs. Serves as row index.
+            +Type: list[(phenotype_id ,genotype_id)]
+        -type_index: dictionary of path type and column index
+            +Type: dict{path_type, index}
+        -partial_list: new pairs data to be added
+            +Type: (phenotype_id, genotype_id, dict{path_type, frequency})
+
+    Returns:
+        -total_results: merged paths. added rows (one per pair)
+            and maybe some columns (if new path type found)
+            +Type: 2D numpy.array. Rows are phenotype-genotype pairs. 
+                Columns are path types
+        - list_elems: updated list of computed pairs (one new per pair)
+            +Type: list[(phenotype_id ,genotype_id)]
+        -type_index: dictionary of path type and column index.
+            one new entry per new type of path
+            +Type: dict{path_type, index}
+    """
     #For each pair processed
     for current_paths in partial_list:
         #Get the pair in question
@@ -42,6 +83,33 @@ def merge_alternative_paths(total_results, list_elems, type_index, partial_list)
 def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
         phenotypes_genes_links, genotypes_genes_links):
+    """
+    Given a list of genotypes and phenotypes, which may be linked through genes,
+    for every linked genotype-phenotype pair find all the alternative paths
+    when removing the linking gene/s.
+    WARNING: This method takes a while to compute (i.e., probably weeks).
+    For this reason, results are stored periodically on disc, and these are not returned.
+
+    Args:
+        -phenotypes_ids: List of phenotypes
+            +Type: list[str]
+        -genotypes_ids: List of genotypes 
+            +Type: list[str]
+        -genes_ids: List of genes 
+            +Type: list[str]
+        -phenotypes_links: List of phenotype-phenotype links 
+            +Type: list[(str,str)]
+        -genotypes_links: List of genotype-genotype links 
+            +Type: list[(str,str)]
+        -phenotypes_genes_links: List of phenotype-genes links 
+            +Type: list[(str,str)]
+        -genotypes_genes_links: List of genotype-genes links 
+            +Type: list[(str,str)]
+
+    Returns:
+        None (see previous Warning)
+    """
+    #Initialize structures
     list_elems = []
     type_index = {}
     total_results = np.empty([0,0])
@@ -51,7 +119,7 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         p_genes = list(set([i[1] for i in phenotypes_genes_links if i[0]==p_id]))
         #And the list of linked genotypes
         p_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
-        #For each linked genotype
+        #Launch the computation for each linked genotype
         pool = Pool(cpu_count())
         partial_list = pool.map(find_phenotype_genotype_alternative_paths,\
                 itertools.izip(itertools.repeat(p_id), p_genotypes,\
@@ -63,8 +131,9 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         pool.join()
         #Merge list with previous results
         total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
+        #Persist partial results
         persist_partial_results(total_results, list_elems, type_index)
-    return total_results
+    return
 
 def find_phenotype_genotype_alternative_paths(argv):
 #def find_paths(p_id, g_id, phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_links, genotypes_genes_links):
@@ -126,4 +195,5 @@ def find_phenotype_genotype_alternative_paths(argv):
             paths_codes[current_code]+=1
         else:
             paths_codes[current_code]=1
+    #Return the pair and their alternative paths 
     return p_id,g_id,paths_codes
