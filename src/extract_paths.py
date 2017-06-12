@@ -1,10 +1,50 @@
 from multiprocessing import Pool, cpu_count
 import itertools
 from graph_methods import *
+import numpy as np
+import cPickle as pickle
+
+def persist_partial_results(total_results, list_elems, type_index):
+    pickle.dump(total_results, open("../results/total_results.pkl", "wb"))
+    pickle.dump(list_elems, open("../results/list_elems.pkl", "wb"))
+    pickle.dump(type_index, open("../results/type_index.pkl", "wb"))
+    return
+    
+def merge_alternative_paths(total_results, list_elems, type_index, partial_list):
+    #For each pair processed
+    for current_paths in partial_list:
+        #Get the pair in question
+        p_id = current_paths[0]
+        g_id = current_paths[1]
+        #Append to the list
+        list_elems.append((p_id, g_id))
+        #Initialize values to zero
+        current_np = np.zeros([len(type_index.keys())])
+        #For each path
+        paths = current_paths[2]
+        for k,v in paths.iteritems():
+            #If the type of path already exists
+            if k in type_index.keys():
+                #Set the value
+                current_np[type_index[k]] = v
+            #New type of path
+            else:
+                #Assign an index
+                type_index[k] = total_results.shape[1]
+                #Add a column of zeros to the total 
+                empty_col = np.zeros([total_results.shape[0],1])
+                total_results = np.hstack((total_results,empty_col))
+                #Add the value to current case
+                current_np = np.append(current_np,v)
+        total_results = np.vstack((total_results,current_np))
+    return total_results, list_elems, type_index
 
 def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
         phenotypes_genes_links, genotypes_genes_links):
+    list_elems = []
+    type_index = {}
+    total_results = np.empty([0,0])
     #For each phenotype
     for p_id in phenotypes_ids:
         #Get the list of linked genes
@@ -13,18 +53,23 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         p_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
         #For each linked genotype
         pool = Pool(cpu_count())
-        list_paths = pool.map(find_phenotype_genotype_alternative_paths,\
-                itertools.izip(itertools.repeat(p_id), p_genotypes[:10],\
+        partial_list = pool.map(find_phenotype_genotype_alternative_paths,\
+                itertools.izip(itertools.repeat(p_id), p_genotypes,\
                 itertools.repeat(phenotypes_ids), itertools.repeat(genotypes_ids),\
                 itertools.repeat(genes_ids), itertools.repeat(phenotypes_links),\
                 itertools.repeat(genotypes_links), itertools.repeat(phenotypes_genes_links),\
                 itertools.repeat(genotypes_genes_links)))
         pool.close()
         pool.join()
-        return list_paths
+        #Merge list with previous results
+        total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
+        persist_partial_results(total_results, list_elems, type_index)
+    return total_results
 
 def find_phenotype_genotype_alternative_paths(argv):
 #def find_paths(p_id, g_id, phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_links, genotypes_genes_links):
+    #TODO: Due to multiprocessing, parameters are passed within a list
+    #TODO: and unpacked here. This can be probably fixed.
     """
     Find all paths between a phenotype and a genotype which share a gene.
     Return the number and type of paths without using the phenotype-shared_gene link.
@@ -53,10 +98,6 @@ def find_phenotype_genotype_alternative_paths(argv):
         -paths_codes: Dictionary containing all path types and their frequency
             +Type: dict{(str,int)}
     """
-    #TODO: add directionality of graph as parameter
-    
-    #TODO: Due to multiprocessing, parameters are passed within a list
-    #TODO: and unpacked here. This can be probably fixed.
     p_id = argv[0]
     g_id = argv[1]
     phenotypes_ids = argv[2]
@@ -73,6 +114,7 @@ def find_phenotype_genotype_alternative_paths(argv):
     phenotypes_genes_pruned_links = [i for i in phenotypes_genes_links \
             if i[0]!= p_id or i[1] not in common_genes]
     #Create the graph
+    #TODO: add directionality of graph as parameter
     graph = build_graph(phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_pruned_links, genotypes_genes_links, undirected=True)
     #Find all paths
     paths = find_all_paths(graph, graph.vs.find(p_id).index, graph.vs.find(g_id).index,maxlen=4)
@@ -84,4 +126,4 @@ def find_phenotype_genotype_alternative_paths(argv):
             paths_codes[current_code]+=1
         else:
             paths_codes[current_code]=1
-    return paths_codes 
+    return p_id,g_id,paths_codes

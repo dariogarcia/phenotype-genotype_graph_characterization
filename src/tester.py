@@ -1,5 +1,6 @@
 from ontology_parser import *
 from graph_methods import *
+from extract_paths import *
 
 #Load the files from input arguments
 #import sys
@@ -18,8 +19,10 @@ phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links
 #print 'Found',len(go_gn_links,),'genotype_gene links'
 
 #Build a graph with it
-G = build_graph(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links, undirected=True)
+#G = build_graph(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links, undirected=True)
 
 #Find all paths between a pair of vertices
-find_all_paths(G,G.vs.find(phenotypes[0]).index,G.vs.find(genotypes[0]).index,maxlen=4)
+#find_all_paths(G,G.vs.find(phenotypes[0]).index,G.vs.find(genotypes[0]).index,maxlen=4)
 
+#Compute all alternative paths for conencted phenotype-genotype pairs
+get_connected_phenotype_genotype_alternative_paths(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links)
