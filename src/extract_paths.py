@@ -249,7 +249,6 @@ def find_phenotype_genotype_alternative_paths(argv):
     """
     p_id = argv[0]
     g_id = argv[1]
-    print p_id, g_id
     phenotypes_ids = argv[2]
     genotypes_ids = argv[3]
     genes_ids = argv[4]
@@ -338,13 +337,12 @@ def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         #And the list of unlinked genotypes
         #...but first, find the linked genotypes
         p_linked_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
-        if not continuing:
-            #keep the rest
-            p_genotypes = list(set(genotypes_ids).difference(p_linked_genotypes))
+        #keep the rest
+        p_genotypes = list(set(genotypes_ids).difference(p_linked_genotypes))
         #If we are continuing a previous partial execution avoid the already computed pairs
-        else:
-            p_genotypes_unclean = list(set(genotypes_ids).difference(p_linked_genotypes))
-            p_genotypes = [x for x in p_genotypes_unclean if (p_id,x) not in list_elems]
+        if continuing:
+            #Remove the already computed ones
+            p_genotypes = [x for x in p_genotypes if (p_id,x) not in list_elems]
         #Launch the computation for each linked genotype
         #pool = Pool(cpu_count())
         pool = Pool(2)
