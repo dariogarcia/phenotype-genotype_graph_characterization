@@ -4,6 +4,7 @@ genes and drugs. They are meant to operate with methods from ontology_parser.
 Methods return the ids of the elements in lists of strings (if elements)
 or lists of tuples (string,string) (if links).
 """
+
 from ontology_parser import *
 
 

@@ -1,154 +1,147 @@
+"""
+This file contains a probability estimator method. Given a phenotype-genotype
+pair within the context of a graph, and some statistics for different types
+of path linking connected and disconnected pairs within the graph, it estimates
+the probability that the pair is directly connected by a gene.
+This file also contains a method for extracting the aforementioned path type
+statistics from some data files, representing the alternative paths that link
+together some phenotype-genotype pairs from a subset of the graph.
+"""
+
+from __future__ import division
 from multiprocessing import Pool, cpu_count
+from scipy.stats import norm
 from extract_paths import *
+import numpy as np
+import operator
+import time
 
 
-def get_pair_list_by_connected_prob(phenotypes_ids, genotypes_ids, genes_ids,
-                                    phenotypes_links, genotypes_links,
-                                    phenotypes_genes_links,
-                                    genotypes_genes_links, continuing=False,
-                                    total_results_path='../results/total_results.pkl',
-                                    list_elems_path='../results/list_elems.pkl',
-                                    type_index_path='../results/type_index.pkl'):
+def get_stats_from_alternative_paths(total_results_path, type_index_path, list_elems_path):
     """
-    Given a list of genotypes and phenotypes, which may be linked through genes,
-    order every genotype-phenotype pair according to the probability that they
-    are directly connected by an (undiscovered) gene.
-    WARNING: This method is parallelized and will use all available CPUs.
-    WARNING: This method takes a while to compute (i.e., probably weeks).
-    For this reason, results are stored periodically on disc, and these are not returned.
+    Loads from some files a set of alternative paths between phenotype-genotype
+    pairs from a graph, return some statistics.
+    Intended for collecting statistics from pairs that are known to be
+    either all connected or all disconnected.
 
     Args:
-        -phenotypes_ids: List of phenotypes
-            +Type: list[str]
-        -genotypes_ids: List of genotypes
-            +Type: list[str]
-        -genes_ids: List of genes
-            +Type: list[str]
-        -phenotypes_links: List of phenotype-phenotype links
-            +Type: list[(str,str)]
-        -genotypes_links: List of genotype-genotype links
-            +Type: list[(str,str)]
-        -phenotypes_genes_links: List of phenotype-genes links
-            +Type: list[(str,str)]
-        -genotypes_genes_links: List of genotype-genes links
-            +Type: list[(str,str)]
-        -continuing: Is this process a continuation of a partial execution?
-            +Type: bool
-        -total_results_path: path to partial and previous total_results
+        -total_results_path: Location of the file where paths are stored
             +Type: str
-        -list_elems_path: path to partial and previous list_elems
+            +Pickle type: 2D numpy.array. Rows are phenotype-genotype pairs.
+                Columns are path types
+        - list_elems: Location of the file where list of computed pairs are stored.
+                    Serves as row index.
             +Type: str
-        -type_index_path: path to partial and previous type_index
+            +Pickle type: list[(phenotype_id, genotype_id)]
+        -type_index: Location of the file where the dictionary of path type
+                    and column index is stored.
             +Type: str
+            +Pickle type: dict{path_type, index}
 
     Returns:
-        None (see previous Warning)
+        -statistics: Mean and standard deviation for each path type
+            +Type: list[(type, mean, stdDev)]
     """
-    # Initialize structures
-    if not continuing:
-        # To be replaced with structures representing the probabilities
-        list_elems = []
-        type_index = {}
-        total_results = np.empty([0, 0])
-    # If we are continuing a previous partial execution
-    # load the precomputed values
-    else:
-        list_elems = pickle.load(open(list_elems_path, 'rb'))
-        type_index = pickle.load(open(type_index_path, 'rb'))
-        total_results = pickle.load(open(total_results_path, 'rb'))
-    # For each phenotype
-    for p_id in phenotypes_ids:
-        # Get the list of linked genes
-        p_genes = list(set([i[1] for i in phenotypes_genes_links if i[0] == p_id]))
-        # And the list of unlinked genotypes
-        # ...but first, find the linked genotypes
-        p_linked_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
-        # keep the rest
-        p_genotypes = list(set(genotypes_ids).difference(p_linked_genotypes))
-        # If we are continuing a previous partial execution avoid the already
-        # computed pairs
-        if continuing:
-            # Remove the already computed ones
-            p_genotypes = [x for x in p_genotypes if (
-                p_id, x) not in list_elems]
-        # Launch the computation for each unlinked genotype
-        pool = Pool(2)
-        prob_connected = pool.map(estimate_connected_probability,
-                                  itertools.izip(itertools.repeat(p_id), p_genotypes,
-                                                 itertools.repeat(phenotypes_ids),
-                                                 itertools.repeat(genotypes_ids),
-                                                 itertools.repeat(genes_ids),
-                                                 itertools.repeat(phenotypes_links),
-                                                 itertools.repeat(genotypes_links),
-                                                 itertools.repeat(phenotypes_genes_links),
-                                                 itertools.repeat(genotypes_genes_links)))
-        pool.close()
-        pool.join()
-        # Add probability and pair to previous results.
-        # N.B.: Results must be ordered according to decreasing connected prob.
+    # Load the three structures
+    # Type: 2D numpy.array. Rows are phenotype-genotype pairs.
+    total_results = pickle.load(open(total_results_path, 'rb'))
+    # Type: dict{path_type, index}
+    type_index = pickle.load(open(type_index_path, 'rb'))
+    # Type: list[(phenotype_id ,genotype_id)]
+    list_elems = pickle.load(open(list_elems_path, 'rb'))
 
-        # Persist partial results (?)
-        persist_alternative_paths(
-            total_results, list_elems, type_index, disconnected=True)
-    return
+    # Compute mean and stddev for each path type
+    means = np.mean(total_results, axis=0)
+    stddevs = np.std(total_results, axis=0)
+    # Sort path types by index (i.e., dictonary value)
+    sorted_types = sorted(type_index.items(), key=operator.itemgetter(1))
+    # Zip the statistics as a single function
+    statistics = zip([x[0] for x in sorted_types], means, stddevs)
+    return statistics
 
 
-def estimate_connected_probability(argv, statistics_path='../data_files/statistics.txt'):
+def estimate_probabilities(graph, common_genes, pair, statistics_conn, statistics_disc):
     """
-    Given a phenotype source, a genotype target, and a list of other
-    genotypes and phenotypes, which may be linked through genes,
-    estimate the probability that a gene connects the source and target.
+    For a given pair of phenotype source and genotype target in a graph,
+    use statistics for connected and disconnected pairs to estimate the
+    probability that the pair is connected/disconnected.
+    The probability estimator is based on normal distributions, with their
+    means and standard deviations set to match those obtained for each type of
+    path in the connected and disconnected cases.
 
     Args:
-        -p_id: Phenotype source of the path
-            +Type: str
-        -g_id: Genotype target of the path
-            +Type: str
-        -phenotypes_ids: List of phenotypes to be used as vertices
+        -G: Graph where the paths are being computed.
+            +Type: igraph graph
+        -common_genes: List of genes linked with source phenotype that are ignored by G
             +Type: list[str]
-        -genotypes_ids: List of genotypes to be used as vertices
-            +Type: list[str]
-        -genes_ids: List of genes to be used as vertices
-            +Type: list[str]
-        -phenotypes_links: List of phenotype-phenotype links to be used as edges
-            +Type: list[(str,str)]
-        -genotypes_links: List of genotype-genotype links to be used as edges
-            +Type: list[(str,str)]
-        -phenotypes_genes_links: List of phenotype-genes links to be used as edges
-            +Type: list[(str,str)]
-        -genotypes_genes_links: List of genotype-genes links to be used as edges
-            +Type: list[(str,str)]
+        -pair: The source phenotype and target genotype ids.
+            +Type: tuple(phenotype_id, genotype_id)
+        -statistics_conn: Mean and standard deviation for each path type (connected)
+            +Type: list[(type, mean, stdDev)]
+        -statistics_disc: Mean and standard deviation for each path type (disconnected)
+            +Type: list[(type, mean, stdDev)]
 
     Returns:
-        -paths_codes: Dictionary containing all path types and their frequency
-            +Type: dict{(str,int)}
+        -probability_conn: The probability that the pair is connected
+            +Type: float
+        -probability_disc: The probability that the pair is disconnected
+            +Type: float
     """
-    p_id = argv[0]
-    g_id = argv[1]
-    phenotypes_ids = argv[2]
-    genotypes_ids = argv[3]
-    genes_ids = argv[4]
-    phenotypes_links = argv[5]
-    genotypes_links = argv[6]
-    phenotypes_genes_links = argv[7]
-    genotypes_genes_links = argv[8]
-    # Find all paths between phenotype-genotype pair with max length 4.
-    path_list = pool.map(find_phenotype_genotype_alternative_paths,
-                         itertools.izip(itertools.repeat(p_id), p_genotypes,
-                                        itertools.repeat(phenotypes_ids),
-                                        itertools.repeat(genotypes_ids),
-                                        itertools.repeat(genes_ids),
-                                        itertools.repeat(phenotypes_links),
-                                        itertools.repeat(genotypes_links),
-                                        itertools.repeat(phenotypes_genes_links),
-                                        itertools.repeat(genotypes_genes_links)))
-    # Estimate probability that the pair is indeed connected.
+    # Measure time for debug
+    start = time.time()
 
-    with open(ph_gen_path) as f:
-        # For each kind of path with mean and std dev.
+    # Find all paths of length 4 between the source and target
+    paths = find_all_paths(graph, graph.vs.find(pair[0]).index, graph.vs.find(pair[1]).index, maxlen=4)
+    # Compute the type and frequency of all found paths
+    found_paths = {}
+    for current_path in paths:
+        current_code = get_phenotype_genotype_path_code(graph, current_path, pair[0], common_genes, pair[1])
+        if current_code in found_paths:
+            found_paths[current_code] += 1
+        else:
+            found_paths[current_code] = 1
 
-        # Normalize values and build normal distr.
-        # Calculate normal distr. probability for such path.
+    # Create a set of all path codes, found and/or in the statistics.
+    found_path_codes = set(found_paths.keys())
+    all_path_codes = found_path_codes | set(x[0] for x in statistics_conn) | set(x[0] for x in statistics_disc)
+    # Compute the probabilities for each path type
+    probability_conn = 1  # Product of all connected probabilities
+    probability_disc = 1  # Product of all disconnected probabilities
+    path_num = 0
+    path_code_found = False
 
-        # Connected prob = product of all previously calculated prob.
-    return
+    for code in all_path_codes:
+        # If paths of that path type were found for the pair, get how many
+        if code in found_path_codes:
+            path_num = found_paths[code]
+        else:
+            path_num = 0
+
+        path_code_found = False
+        # Check if the type is found in the connected statistics.
+        for stat in statistics_conn:
+            if code == stat[0]:
+                # Probability of path type calculated through normal distr.
+                probability_conn *= norm.pdf((path_num - stat[1]) / stat[2])
+                path_code_found = True
+                break
+        # If not found, we assume mean = 0, and stdDev = 1.
+        if not path_code_found:
+            probability_conn *= norm.pdf(path_num)
+
+        path_code_found = False
+        # Check if the type is found in the disconnected statistics.
+        for stat in statistics_disc:
+            if code == stat[0]:
+                # Probability of path type calculated through normal distr.
+                probability_disc *= norm.pdf((path_num - stat[1]) / stat[2])
+                path_code_found = True
+                break
+        # If not found, we assume mean = 0, and stdDev = 1.
+        if not path_code_found:
+            probability_disc *= norm.pdf(path_num)
+
+    end = time.time()
+    print "Elapsed time : ", (end - start)
+
+    return probability_conn, probability_disc

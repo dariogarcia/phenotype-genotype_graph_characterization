@@ -1,0 +1,17 @@
+(dp1
+S'PppnG'
+p2
+I4
+sS'PngnG'
+p3
+I1
+sS'PnpnG'
+p4
+I0
+sS'PngG'
+p5
+I2
+sS'PnggG'
+p6
+I3
+s.
