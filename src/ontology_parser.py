@@ -19,8 +19,8 @@ def load_phenotypes_ids(po_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(po_path, 'rb').read()).hexdigest() != 'a48f293dfed9eef6aabbe400ac32f032':
-        print 'WARNING: Hash of file',po_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',po_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     phenotypes_ids = []
     with open(po_path) as f:
@@ -49,8 +49,8 @@ def load_genotypes_ids(go_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(go_path, 'rb').read()).hexdigest() != '569240d38bd319fbf200ff1d09606640':
-        print 'WARNING: Hash of file',go_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',go_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     genotypes_ids = []
     with open(go_path) as f:
@@ -76,8 +76,8 @@ def load_phenotype_phenotype_links(po_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(po_path, 'rb').read()).hexdigest() != 'a48f293dfed9eef6aabbe400ac32f032':
-        print 'WARNING: Hash of file',po_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',po_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     phenotypes_links = []
     with open(po_path) as f:
@@ -118,8 +118,8 @@ def load_genotype_genotype_links(go_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(go_path, 'rb').read()).hexdigest() != '569240d38bd319fbf200ff1d09606640':
-        print 'WARNING: Hash of file',go_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',go_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     genotypes_links = []
     with open(go_path) as f:
@@ -163,8 +163,8 @@ def load_phenotypes_genes_links(ph_gen_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(ph_gen_path, 'rb').read()).hexdigest() != 'a5f7d8d8accbd1983cef710ebb586736':
-        print 'WARNING: Hash of file',ph_gen_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',ph_gen_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     phenotypes_genes_links = []
     with open(ph_gen_path) as f:
@@ -195,8 +195,8 @@ def load_genotypes_genes_links(go_gen_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(go_gen_path, 'rb').read()).hexdigest() != 'c943dcfbd6a6432761841304ff79d372':
-        print 'WARNING: Hash of file',go_gen_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',go_gen_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     genotypes_genes_links = []
     with open(go_gen_path) as f:
@@ -205,9 +205,9 @@ def load_genotypes_genes_links(go_gen_path):
             if line[0] == '!':
                 continue
             #In some cases the split needs an offset
-            offset = 0 
+            offset = 0
             if line.split()[6] in ['EXP','IDA','IPI','IMP','IGI','IEP','TAS','ND','NAS','ISS','IKR','IEA','IC','IBA']:
-                offset = 1 
+                offset = 1
             #Avoid those links which are not experimental results
             if line.split()[5+offset] not in ['EXP','IDA','IPI','IMP','IGI','IEP']:
                 continue
@@ -225,14 +225,14 @@ def load_genotypes_genes_links(go_gen_path):
 def load_all_genes(ph_gen_path, go_gen_path):
     """
     Obtains the list of genes ids which are linked to at least
-    one phenotype or genotype 
+    one phenotype or genotype
 
     Args:
         - ph_gen_path: path to the file linking phenotypes with genes
             + Type: str
         - go_gen_path: path to the file linking genotypes with genes
             + Type: str
-    
+
     Returns:
         -genes_ids: list of unique genes linked in the ph or go ontologies
             + Type: list[str]
@@ -240,11 +240,11 @@ def load_all_genes(ph_gen_path, go_gen_path):
     #Check if the file is the expected one
     import hashlib
     if hashlib.md5(open(go_gen_path, 'rb').read()).hexdigest() != 'c943dcfbd6a6432761841304ff79d372':
-        print 'WARNING: Hash of file',go_gen_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',go_gen_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     if hashlib.md5(open(ph_gen_path, 'rb').read()).hexdigest() != 'a5f7d8d8accbd1983cef710ebb586736':
-        print 'WARNING: Hash of file',ph_gen_path,'does not match expected value.'
-        print 'WARNING: Parsing may not be correct.'
+        print('WARNING: Hash of file',ph_gen_path,'does not match expected value.')
+        print('WARNING: Parsing may not be correct.')
     #Process the file
     genes_ids = set()
     with open(ph_gen_path) as f:
@@ -281,7 +281,7 @@ def load_shared_genes(ph_gen_path, go_gen_path):
             + Type: str
         - go_gen_path: path to the file linking genotypes with genes
             + Type: str
-    
+
     Returns:
         -genes_ids: list of genes shared by both ph and go ontologies
             + Type: list[str]
@@ -301,7 +301,7 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
     Loads and returns the phenotypes, go-terms and genes of the PHO and GO ontologies.
     It also returns their links (P-P,P-Gn,GO-GO,GO-Gn)
     Only the genes shared by both ontologies are returned.
-    
+
     Args:
         - po_path: path to the phenotype ontology
             + Type: str
@@ -326,7 +326,7 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
             + Type list[(source phenotype str,target gene str)]
         - genotype_gene_links: list of links between genotypes and genes
             + Type list[(source genotype str,target gene str)]
-        - 
+        -
     """
     #TODO: There is redundancy in this call. load_shared_genes parses() the files
     #TODO: and so do load_phenotypes_genes_links() and load_genotypes_genes_links()
@@ -340,8 +340,8 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
         dirty_genotype_gene_links = load_genotypes_genes_links(go_gen_path)
         genotype_gene_links = [l for l in dirty_genotype_gene_links if l[1] in genes_ids]
     else:
-        genes_ids = load_all_genes(ph_gen_path, go_gen_path) 
+        genes_ids = load_all_genes(ph_gen_path, go_gen_path)
         phenotype_gene_links = load_phenotypes_genes_links(ph_gen_path)
         genotype_gene_links = load_genotypes_genes_links(go_gen_path)
-        
+
     return load_phenotypes_ids(po_path), load_genotypes_ids(go_path), genes_ids, load_phenotype_phenotype_links(po_path), load_genotype_genotype_links(go_path), phenotype_gene_links, genotype_gene_links

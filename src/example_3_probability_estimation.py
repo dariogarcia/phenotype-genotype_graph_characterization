@@ -210,12 +210,8 @@ def test_probability_estimator_disconnected(phenotypes_ids, genotypes_ids, genes
             if (p_id, g_id) in list_elems:
                 itteration -= 1; continue
 
-            #Find the common genes of this pair
-            common_genes = [gene for gene in genes_ids if (p_id,gene) in phenotypes_genes_links \
-                    and (g_id,gene) in genotypes_genes_links]
-
             # Estimate probabilities the phenotype-genotype pair
-            prob_conn, prob_disc = estimate_probabilities(graph, common_genes, (p_id, g_id), statistics_conn, statistics_disc)
+            prob_conn, prob_disc = estimate_probabilities(graph, [], (p_id, g_id), statistics_conn, statistics_disc)
             prob_diff = prob_conn - prob_disc
             # Append the results to the probabilities_table
             probabilities_table.append(((p_id, g_id), prob_conn, prob_disc, prob_diff))

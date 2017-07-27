@@ -1,0 +1,41 @@
+Statistics as of June 22nd, 12:07AM
+
+-----------------------------
+DISCONNECTED PAIRS
+Statistics for 46,638 phenotype-genotype pairs
+corresponding to 1 unique phenotypes
+-----------------------------
+Path_type	Mean	StdDev
+PppNG	0.0	0.0
+PngnG	0.156438955358	2.75754006639
+PnpnG	2.85970667696	55.3185592391
+PnpNG	0.0	0.0
+PppnG	0.0	0.0
+PpnG	0.0	0.0
+PpngG	0.0	0.0
+PngNG	0.0	0.0
+PpNG	0.0	0.0
+PpNgG	0.0	0.0
+PngG	0.000042883485569	0.00654840794212
+PnggG	0.000214417427849	0.0146414293365
+
+-----------------------------
+CONNECTED PAIRS
+-----------------------------
+Statistics for 28,473 phenotype-genotype pairs
+corresponding to 268 unique phenotypes
+-----------------------------
+Path_type	Mean	StdDev
+PppNG	0.906226951849	2.82566684926
+PngnG	1005.13040424	3121.12462887
+PnpnG	3299.05222491	11993.8319477
+PnpNG	875.275629544	2259.79181299
+PppnG	3.10255329611	17.6186083437
+PpnG	0.879675482036	8.75202615774
+PpngG	1.97590699961	16.3220532405
+PngNG	100.585747902	208.971323331
+PpNG	0.160748779546	0.61813441081
+PpNgG	0.0337863941278	0.352975396134
+PngG	1.75611983282	9.42189936002
+PnggG	4.74758543181	15.4935756584
+-----------------------------
