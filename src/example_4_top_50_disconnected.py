@@ -32,6 +32,62 @@ class GracefulKiller:
     def exit_gracefully(self,signum, frame):
         self.kill_now = True
 
+class Top50_Node:
+    """
+    A node for the top 50 sorted chained list.
+    Source: https://gist.github.com/ptigas/2820165
+    """
+    def __init__(self, pair):
+        self.pair = pair
+        self.next = None
+
+class Top50:
+    """
+    The list of the top 40 disconnected pairs with a higher estimated
+    probability of being connected. A sorted chained list that, on every
+    addition, ensures that there are always only 50 elements.
+    Source: https://gist.github.com/ptigas/2820165
+    """
+    def __init__(self):
+        self.head = None
+
+    def add(self, newPair):
+        node = Top50_Node(newPair)
+        # If the list has no head, or the head has lower score, the new node becomes the head.
+        if (self.head is None) or (self.head.pair[1] < node.pair[1]):
+            node.next = self.head
+            self.head = node
+        # Otherwise we look for a node after which the new node can be placed.
+        else:
+            currNode = self.head
+            currPos = 1
+            # Skip until the next node has lower score, or there is no next node
+            while (currNode.next is not None) and (currNode.next.pair[1] >= node.pair[1]):
+                currNode = currNode.next
+                currPos += 1
+            # If we haven't reached yet position 50, we add the new node.
+            if currPos < 50:
+                node.next = currNode.next
+                currNode.next = node
+
+
+def get_list(top_50):
+    """
+    Outputs all the elements of a Top50 list object as a regular python list.
+
+    Args:
+        -top_50: A list of top 50 disconnected pairs
+            +Type: Top50
+    Returns:
+        -output_list: The (ordered) items of top_50, in the form of a python list.
+            +Type: list[((p_id, g_id), prob_conn, prob_disc)]
+    """
+    output_list = []
+    currNode = top_50.head
+    while currNode is not None:
+        output_list.append(currNode.pair)
+        currNode = currNode.next
+    return output_list
 
 def find_top_50_pairs(phenotypes_ids, genotypes_ids, genes_ids,
                       phenotypes_links, genotypes_links,
@@ -84,6 +140,7 @@ def find_top_50_pairs(phenotypes_ids, genotypes_ids, genes_ids,
     graph = build_graph(phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_links, genotypes_genes_links)
     statistics_conn = get_stats_from_alternative_paths(total_results_path_conn, type_index_path_conn, list_elems_path_conn)
     statistics_disc = get_stats_from_alternative_paths(total_results_path_disc, type_index_path_disc, list_elems_path_disc)
+    top_50 = Top50()
     top_50_list = []
     prob_conn = prob_disc = 0
     loop_killer = GracefulKiller()
@@ -111,18 +168,26 @@ def find_top_50_pairs(phenotypes_ids, genotypes_ids, genes_ids,
             prob_conn, prob_disc = estimate_probabilities(graph, [], (p_id, g_id), statistics_conn, statistics_disc)
 
             # Append the results to the probabilities_table
-            probabilities_table.append(((p_id, g_id), prob_conn, prob_disc, prob_diff))
+            top_50.add(((p_id, g_id), prob_conn, prob_disc))
+            top_50_list = get_list(top_50)
 
             # Exit the loop if the program is killed
-            if loop_killer.kill_now:
-                break
+            if loop_killer.kill_now: break
+            # But save to disk anyway
+            pickle.dump(top_50_list, open("../results/top_50_disc_pairs_list.pkl", "wb"))
+
+            print "----------------------------------------------------------------------"
+            for i in top_50_list: print i
+            print "----------------------------------------------------------------------"
         raise KeyboardInterrupt
 
     # Code executed at the end of the function, or if the program is interrupted/killed
     except KeyboardInterrupt:
-        # Sort probabilities_table by probability difference
-        probabilities_table = sorted(probabilities_table, key=lambda x: x[3])
-        pickle.dump(probabilities_table, open("../results/estimated_probs_disc.pkl", "wb"))
+        pickle.dump(top_50_list, open("../results/top_50_disc_pairs_list.pkl", "wb"))
+
+        print "----------------------------------------------------------------------"
+        for i in top_50_list: print i
+        print "----------------------------------------------------------------------"
 
 # ----------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------
