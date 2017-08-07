@@ -87,9 +87,6 @@ def estimate_probabilities(graph, common_genes, pair, statistics_conn, statistic
         -probability_disc: The probability that the pair is disconnected
             +Type: float
     """
-    # Measure time for debug
-    start = time.time()
-
     # Find all paths of length 4 between the source and target
     paths = find_all_paths(graph, graph.vs.find(pair[0]).index, graph.vs.find(pair[1]).index, maxlen=4)
     # Compute the type and frequency of all found paths
@@ -100,7 +97,6 @@ def estimate_probabilities(graph, common_genes, pair, statistics_conn, statistic
             found_paths[current_code] += 1
         else:
             found_paths[current_code] = 1
-
     # Create a set of all path codes, found and/or in the statistics.
     found_path_codes = set(found_paths.keys())
     all_path_codes = found_path_codes | set(x[0] for x in statistics_conn) | set(x[0] for x in statistics_disc)
@@ -108,40 +104,33 @@ def estimate_probabilities(graph, common_genes, pair, statistics_conn, statistic
     probability_conn = 1  # Product of all connected probabilities
     probability_disc = 1  # Product of all disconnected probabilities
     path_num = 0
-    path_code_found = False
-
     for code in all_path_codes:
         # If paths of that path type were found for the pair, get how many
         if code in found_path_codes:
             path_num = found_paths[code]
         else:
             path_num = 0
-
-        path_code_found = False
         # Check if the type is found in the connected statistics.
+        # If not found, we assume mean = 0, and stdDev = 1.
+        mean = 0
+        std = 1
+        #If path statistics in connected data, load it
         for stat in statistics_conn:
             if code == stat[0]:
-                # Probability of path type calculated through normal distr.
-                probability_conn *= norm.pdf((path_num - stat[1]) / stat[2])
-                path_code_found = True
+                mean = stat[1]
+                std = stat[2]
                 break
-        # If not found, we assume mean = 0, and stdDev = 1.
-        if not path_code_found:
-            probability_conn *= norm.pdf(path_num)
-
-        path_code_found = False
+        # Probability of path type calculated through normal distr.
+        probability_conn *= norm.pdf((path_num - mean) / std)
         # Check if the type is found in the disconnected statistics.
+        # If not found, we assume mean = 0, and stdDev = 1.
+        mean = 0
+        std = 1
         for stat in statistics_disc:
             if code == stat[0]:
-                # Probability of path type calculated through normal distr.
-                probability_disc *= norm.pdf((path_num - stat[1]) / stat[2])
-                path_code_found = True
+                mean = stat[1]
+                std = stat[2]
                 break
-        # If not found, we assume mean = 0, and stdDev = 1.
-        if not path_code_found:
-            probability_disc *= norm.pdf(path_num)
-
-    end = time.time()
-    print "Elapsed time : ", (end - start)
-
+        # Probability of path type calculated through normal distr.
+        probability_disc *= norm.pdf((path_num - stat[1]) / stat[2])
     return probability_conn, probability_disc
