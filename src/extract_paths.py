@@ -188,6 +188,10 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         list_elems = pickle.load(open(list_elems_path,'rb'))
         type_index = pickle.load(open(type_index_path,'rb'))
         total_results = pickle.load(open(total_results_path,'rb'))
+        print 'Continuing from a previous computation'
+        print 'Total elements pre-computed:',len(list_elems)
+        print 'Total num. of different paths pre-found:',len(type_index)
+        print 'Data matrix shape:',total_results.shape
     #For each phenotype
     for p_id in phenotypes_ids:
         #Get the list of linked genes
@@ -199,9 +203,13 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         else:
             p_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes
                 and (p_id,i[0]) not in list_elems]))
+        #Howver unlikely, there may be no connected genotypes with the current phenotype
+        if len(p_genotypes)==0:
+            continue
         #Launch the computation for each linked genotype
         #pool = Pool(cpu_count())
         pool = Pool(2)
+        print 'Going to compute',len(p_genotypes),'connected genotypes'
         partial_list = pool.map(find_phenotype_genotype_alternative_paths,\
                 itertools.izip(itertools.repeat(p_id), p_genotypes,\
                 itertools.repeat(phenotypes_ids), itertools.repeat(genotypes_ids),\
@@ -282,10 +290,10 @@ def find_phenotype_genotype_alternative_paths(argv):
 
 def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
-        phenotypes_genes_links, genotypes_genes_links, continuing=False,
-        total_results_path = '../results/total_results_dis.pkl',
-        list_elems_path = '../results/list_elems_dis.pkl',
-        type_index_path = '../results/type_index_dis.pkl'):
+        phenotypes_genes_links, genotypes_genes_links, continuing=False, 
+        total_results_path = '../results/total_results_disc.pkl',
+        list_elems_path = '../results/list_elems_disc.pkl',
+        type_index_path = '../results/type_index_disc.pkl'):
     """
     Given a list of genotypes and phenotypes, find all the paths
     for every genotype-phenotype pair not linked through a gene.
@@ -331,6 +339,10 @@ def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         list_elems = pickle.load(open(list_elems_path,'rb'))
         type_index = pickle.load(open(type_index_path,'rb'))
         total_results = pickle.load(open(total_results_path,'rb'))
+        print 'Continuing from a previous computation'
+        print 'Total elements pre-computed:',len(list_elems)
+        print 'Total num. of different paths pre-found:',len(type_index)
+        print 'Data matrix shape:',total_results.shape
     #For each phenotype
     for p_id in phenotypes_ids:
         #Get the list of linked genes
@@ -344,7 +356,11 @@ def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         if continuing:
             #Remove the already computed ones
             p_genotypes = [x for x in p_genotypes if (p_id,x) not in list_elems]
+        #However unlikely, there may be no disconnected genotypes with the current phenotype
+        if len(p_genotypes)==0:
+            continue
         #Launch the computation for each linked genotype
+        print 'Going to compute',len(p_genotypes),'disconnected genotypes'
         #pool = Pool(cpu_count())
         pool = Pool(2)
         partial_list = pool.map(find_phenotype_genotype_alternative_paths,\

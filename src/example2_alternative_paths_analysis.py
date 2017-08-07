@@ -17,4 +17,7 @@ from extract_paths import *
 #read_and_analyze_alternative_paths(sys.argv[1],sys.argv[2],sys.argv[3])
 
 #OPTION 2: File paths hardcoded into constants
+print 'Connected pairs'
 read_and_analyze_alternative_paths('../results/total_results.pkl', '../results/type_index.pkl', '../results/list_elems.pkl')
+print 'Disconnected pairs'
+read_and_analyze_alternative_paths('../results/total_results_disc.pkl', '../results/type_index_disc.pkl', '../results/list_elems_disc.pkl')
