@@ -296,7 +296,7 @@ def load_shared_genes(ph_gen_path, go_gen_path):
     return list(genes_genotypes.intersection(genes_phenotypes))
 
 
-def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True):
+def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True, human_only=True):
     """
     Loads and returns the phenotypes, go-terms and genes of the PHO and GO ontologies.
     It also returns their links (P-P,P-Gn,GO-GO,GO-Gn)
@@ -311,6 +311,10 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
             + Type: str
         - go_gen_path: path to the file linking genotypes with genes
             + Type: str
+        - only_shared_genes: load only genes shared by both ontologies
+            + Type: bool
+        - human_only: load only genes annotated in humans
+            + Type: bool
     Returns:
         - phenotypes_ids: list of phenotype ids from the PHO
             + Type list[str]
@@ -328,7 +332,7 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
             + Type list[(source genotype str,target gene str)]
         -
     """
-    #TODO: There is redundancy in this call. load_shared_genes parses() the files
+    #TODO: There is redundancy in this call. load_shared_genes() parses the files
     #TODO: and so do load_phenotypes_genes_links() and load_genotypes_genes_links()
     if only_shared_genes:
         #Get list of genes ids shared by both ontologies
@@ -344,4 +348,10 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
         phenotype_gene_links = load_phenotypes_genes_links(ph_gen_path)
         genotype_gene_links = load_genotypes_genes_links(go_gen_path)
 
-    return load_phenotypes_ids(po_path), load_genotypes_ids(go_path), genes_ids, load_phenotype_phenotype_links(po_path), load_genotype_genotype_links(go_path), phenotype_gene_links, genotype_gene_links
+    if human_only:
+        human_only_terms = [x[0] for x in genotype_gene_links]
+        genotype_genotype_links = load_genotype_genotype_links(go_path)
+        human_only_genotype_genotype_links = [x for x in genotype_genotype_links if x[0] in human_only_terms and x[1] in human_only_terms]
+        return load_phenotypes_ids(po_path), human_only_terms, genes_ids, load_phenotype_phenotype_links(po_path), human_only_genotype_genotype_links, phenotype_gene_links, genotype_gene_links
+    else:
+        return load_phenotypes_ids(po_path), load_genotypes_ids(go_path), genes_ids, load_phenotype_phenotype_links(po_path), load_genotype_genotype_links(go_path), phenotype_gene_links, genotype_gene_links
