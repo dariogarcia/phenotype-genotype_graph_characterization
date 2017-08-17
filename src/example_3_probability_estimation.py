@@ -9,10 +9,9 @@ This file tests the accuracy of the probability estimator by:
 -Saving the list of each pair and its estimated probabilities using pickle
 """
 
-from ontology_parser import *
-from graph_methods import *
-from extract_paths import *
-from probability_estimator import *
+from ontology_parser import load_data
+from graph_methods import build_graph
+from probability_estimator import * # Both methods from the estimator are needed.
 import random
 import signal
 import sys

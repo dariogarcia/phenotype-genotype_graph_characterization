@@ -1,6 +1,6 @@
 from multiprocessing import Pool, cpu_count
 import itertools
-from graph_methods import *
+from graph_methods import * # All of the methods are used
 import numpy as np
 import cPickle as pickle # For Python 2.7
 # import _pickle as pickle # For Python 3

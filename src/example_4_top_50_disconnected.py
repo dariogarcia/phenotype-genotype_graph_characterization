@@ -11,7 +11,7 @@ This file is similar to example 3, it shows an example on how to:
 
 from ontology_parser import load_data
 from graph_methods import build_graph
-from probability_estimator import * #Both methods from the estimator are needed.
+from probability_estimator import * # Both methods from the estimator are needed.
 import random
 import signal
 import sys

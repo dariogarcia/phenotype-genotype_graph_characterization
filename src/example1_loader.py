@@ -6,9 +6,10 @@ This file shows example on how to:
 -Find all alternative paths between all pairs of phenotype-genotype connected through a gene
 """
 
-from ontology_parser import *
-from graph_methods import *
-from extract_paths import *
+from ontology_parser import load_data
+from graph_methods import build_graph, find_all_paths
+from extract_paths import get_connected_phenotype_genotype_alternative_paths
+from extract_paths import get_disconnected_phenotype_genotype_paths
 
 #OPTION 1: File paths obtained from arguments
 #import sys

@@ -15,10 +15,6 @@ It also shows examples on how to:
 
 from __future__ import division
 from copy import deepcopy
-from ontology_parser import *
-from graph_methods import *
-from extract_paths import *
-from probability_estimator import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
