@@ -9,16 +9,13 @@ This file is similar to example 3, it shows an example on how to:
 -Save the top 50 list (each pair and its estimated probability) using pickle
 """
 
-#TODO: Importing with * is a bad practice. It may lead to unsuspected imports
-#       and weird errors. Specify what you import from where
-
-from ontology_parser import *
-from graph_methods import *
-from extract_paths import *
-from probability_estimator import *
+from ontology_parser import load_data
+from graph_methods import build_graph
+from probability_estimator import * #Both methods from the estimator are needed.
 import random
 import signal
 import sys
+
 
 class GracefulKiller:
     """
@@ -35,8 +32,8 @@ class GracefulKiller:
     def exit_gracefully(self,signum, frame):
         self.kill_now = True
 
-#TODO: Rename to something more coherent
-class Top50_Node:
+
+class LinkedList_Node:
     """
     A node for the top 50 sorted chained list.
     Source: https://gist.github.com/ptigas/2820165
@@ -45,65 +42,76 @@ class Top50_Node:
         self.pair = pair
         self.next = None
 
-#TODO: This is simply a linked list with a priority value. It should be
-#   renamed to something more coherent. Also, the size (e.g., 50) should be
-#   parametrized for usability.
-class Top50:
+
+class LinkedList:
     """
-    The list of the top disconnected pairs with a higher estimated
-    probability of being connected. A sorted chained list that, on every
-    addition, ensures that there are always only 50 elements.
+    A linked list object of maximum length, sorted on a priority value.
+    Used for representing the list of the top 50 disconnected pairs with a
+    higher estimated probability of being connected (with max length 50).
     Source: https://gist.github.com/ptigas/2820165
     """
-    def __init__(self):
+    def __init__(self, max_len):
         """
-        Initialize an empty linked list
+        Initialize an empty linked list.
         """
         self.head = None
+        self.max_len = max_len
 
     def add(self, newPair):
         """
         Add a new element to the linked list in the appropriate position.
+        Returns true if the element was indeed added, false otherwise.
         """
-        node = Top50_Node(newPair)
-        # If the list is empty, or the head has lower score, the new node becomes the head.
-        if (self.head is None) or (self.head.pair[1] < node.pair[1]):
-            node.next = self.head
-            self.head = node
-        #TODO: The list keeps growing beyond the maximum number of elements if better 
-        #       candidates are found. If the size is beyond the max, the last element
-        #       should be removed after adding the new head.
-        # Check if the new element should be added on a later position.
+        new_node = LinkedList_Node(newPair)
+        curr_node = self.head # Current node starts at the head.
+        curr_pos = 1 # Head is at position 1, last possible position is max_len
+        pair_was_added = False # Wether the pair was added or not
+        
+        # If the list is empty, or the candidate is better than the head,
+        # the candidate becomes the head.
+        if (self.head is None) or (self.head.pair[1] < new_node.pair[1]):
+            new_node.next = self.head
+            self.head = new_node
+            
+        # Else check if the candidate should be added on a later position.
         else:
-            currNode = self.head
-            currPos = 1
-            # While there is list to traverse, and current node is better than candidate
-            while (currNode.next is not None) and (currNode.next.pair[1] >= node.pair[1]):
-                currNode = currNode.next
-                currPos += 1
-            # At this point, either we found that the candidate is better than a previous
-            # node, or the list is empty. 
-            if currPos < 1000:
-                node.next = currNode.next
-                currNode.next = node
+            # While there is a next node, and it is better than candidate.
+            while (curr_node.next is not None) and (curr_node.next.pair[1] >= new_node.pair[1]):
+                curr_node = curr_node.next
+                curr_pos += 1
+            # At this point, next node is either worse than candidate, or None.
+            # If we haven't yet reached the max length, add the candidate node.
+            if curr_pos < self.max_len:
+                new_node.next = curr_node.next
+                curr_node.next = new_node
+                pair_was_added = True
+                
+        # In any case, find the last node (limited by max length)
+        while (curr_pos < self.max_len) and (curr_node.next is not None):
+            curr_node = curr_node.next
+            curr_pos += 1
+        # Unreference any nodes that may follow (next node becomes None)
+        if curr_pos = self.max_len: curr_node.next = None
+        
+        return pair_was_added
 
 
 def get_list(top_50):
     """
-    Outputs all the elements of a Top50 list object as a regular python list.
+    Outputs all the elements of a linked list object as a regular python list.
 
     Args:
-        -top_50: A list of top 50 disconnected pairs
-            +Type: Top50
+        -top_50: A linked list object representing the top 50 disconnected pairs.
+            +Type: LinkedList
     Returns:
         -output_list: The (ordered) items of top_50, in the form of a python list.
             +Type: list[((p_id, g_id), prob_conn, prob_disc)]
     """
     output_list = []
-    currNode = top_50.head
-    while currNode is not None:
-        output_list.append(currNode.pair)
-        currNode = currNode.next
+    curr_node = top_50.head
+    while curr_node is not None:
+        output_list.append(curr_node.pair)
+        curr_node = curr_node.next
     return output_list
 
 def find_top_50_pairs(phenotypes_ids, genotypes_ids, genes_ids,
@@ -162,7 +170,8 @@ def find_top_50_pairs(phenotypes_ids, genotypes_ids, genes_ids,
     #Compute statistics for disconnected pairs
     statistics_disc = get_stats_from_alternative_paths(total_results_path_disc, type_index_path_disc, list_elems_path_disc)
     #Create an empty linked list to store results
-    top_50 = Top50()
+    top_50 = LinkedList(50)
+    top_50_list = get_list(top_50)
     prob_conn = prob_disc = 0
     loop_killer = GracefulKiller()
 
@@ -173,37 +182,36 @@ def find_top_50_pairs(phenotypes_ids, genotypes_ids, genes_ids,
             p_id = random.choice(phenotypes_ids)
             # Get the list of linked genes
             p_genes = list(set([i[1] for i in phenotypes_genes_links if i[0] == p_id]))
-            # And the list of linked genotypes
+            # And then the list of linked genotypes
             p_linked_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
             # From all genotypes, take away the linked genotypes to get the disconnected genotypes
             p_genotypes = list(set(genotypes_ids).difference(p_linked_genotypes))
-            # If there are no disconnected genotypes (is this even possible?), chose a different phenotype
+            # However unlikely, a case where no disconnected genotypes are found must be treated
             if len(p_genotypes) == 0: continue
 
             # Pick a random genotype that is disconnected to the phenotype
             g_id = random.choice(p_genotypes)
             # If the selected pair was used to compute the statistics, skip it
             if (p_id, g_id) in list_elems: continue
-            # TODO: This pair may already have been added to the list of top pairs. 
-            #       its extremly unlikely, but possible. In that case it should be skipped.
+            # If the pair is already in the list of top pairs, skip it
+            if (p_id, g_id) in [x[0] for x in top_50_list]: continue
 
             # Estimate probabilities the phenotype-genotype pair
             prob_conn, prob_disc = estimate_probabilities(graph, [], (p_id, g_id), statistics_conn, statistics_disc)
-
             # Try to add the new pair to the list of top pairs
-            top_50.add(((p_id, g_id), prob_conn, prob_disc))
-            top_50_list = get_list(top_50)
-            # TODO: Check if the element was added or not (has the list changed?)
-            #       Otherwise there is no list to print & save the list again
-
+            pair_was_added = top_50.add(((p_id, g_id), prob_conn, prob_disc))
+            
             # Exit the loop if the program is killed
             if loop_killer.kill_now: break
-            # But save to disk anyway
-            pickle.dump(top_50_list, open("../results/top_50_disc_pairs_list.pkl", "wb"))
+            
+            # If the element was added, print and save the list to disk
+            if pair_was_added:
+                top_50_list = get_list(top_50)
+                pickle.dump(top_50_list, open("../results/top_50_disc_pairs_list.pkl", "wb"))
+                print "----------------------------------------------------------------------"
+                for i in top_50_list: print i
+                print "----------------------------------------------------------------------"
 
-            print "----------------------------------------------------------------------"
-            for i in top_50_list: print i
-            print "----------------------------------------------------------------------"
         raise KeyboardInterrupt
 
     # Code executed at the end of the function, or if the program is interrupted/killed

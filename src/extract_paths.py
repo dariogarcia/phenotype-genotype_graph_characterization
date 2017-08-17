@@ -51,7 +51,8 @@ def read_and_analyze_alternative_paths(total_results_path, type_index_path, list
         print(elem[0][0],'\t ',elem[1],'\t ',elem[2])
     print('-----------------------------')
 
-def persist_alternative_paths(total_results, list_elems, type_index, disconnected = False):
+def persist_alternative_paths(total_results, list_elems, type_index,
+                              total_results_path, list_elems_path, type_index_path):
     """
     Persists partial results on disk using numpy
 
@@ -63,24 +64,20 @@ def persist_alternative_paths(total_results, list_elems, type_index, disconnecte
             +Type: list[(phenotype_id ,genotype_id)]
         -type_index: dictionary of path type and column index
             +Type: dict{path_type, index}
-        -disconnected: the data corresponds to connected or disconnected pairs?
-            +Type: boolean
+        -total_results_path: path for storing total_results
+            +Type: str
+        -list_elems_path: path for storing list_elems
+            +Type: str
+        -type_index_path: path for storing type_index
+            +Type: str
 
     Returns:
         None. Persists data.
     """
     #TODO: files are currently overwritten. Consider when this may not be desirable
-    #TODO: hardcoded paths make jesus cry
-    #TODO: disconnected input paramter is uglier than yo mamma. Path a target path instead.
-    if not disconnected:
-        pickle.dump(total_results, open("../results/total_results.pkl", "wb"))
-        pickle.dump(list_elems, open("../results/list_elems.pkl", "wb"))
-        pickle.dump(type_index, open("../results/type_index.pkl", "wb"))
-    else:
-        pickle.dump(total_results, open("../results/total_results_disc.pkl", "wb"))
-        pickle.dump(list_elems, open("../results/list_elems_disc.pkl", "wb"))
-        pickle.dump(type_index, open("../results/type_index_disc.pkl", "wb"))
-    return
+    pickle.dump(total_results, open(total_results_path, "wb"))
+    pickle.dump(list_elems, open(list_elems_path, "wb"))
+    pickle.dump(type_index, open(type_index_path, "wb"))
 
 def merge_alternative_paths(total_results, list_elems, type_index, partial_list):
     """
@@ -203,9 +200,8 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         else:
             p_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes
                 and (p_id,i[0]) not in list_elems]))
-        #Howver unlikely, there may be no connected genotypes with the current phenotype
-        if len(p_genotypes)==0:
-            continue
+        #However unlikely, there may be no connected genotypes with the current phenotype
+        if len(p_genotypes)==0: continue
         #Launch the computation for each linked genotype
         #pool = Pool(cpu_count())
         pool = Pool(2)
@@ -221,72 +217,9 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         #Merge list with previous results
         total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
         #Persist partial results
-        persist_alternative_paths(total_results, list_elems, type_index)
+        persist_alternative_paths(total_results, list_elems, type_index,
+                                  total_results_path, list_elems_path, type_index_path)
     return
-
-def find_phenotype_genotype_alternative_paths(argv):
-#def find_paths(p_id, g_id, phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_links, genotypes_genes_links):
-    #TODO: Due to multiprocessing, parameters are passed within a list
-    #TODO: and unpacked here. This can be probably fixed.
-    """
-    Find all paths between a phenotype and a genotype which share a gene.
-    Return the number and type of paths without using the phenotype-shared_gene link.
-
-    Args:
-        -p_id: Phenotype source of the path
-            +Type: str
-        -g_id: Genotype target of the path
-            +Type: str
-        -phenotypes_ids: List of phenotypes to be used as vertices
-            +Type: list[str]
-        -genotypes_ids: List of genotypes to be used as vertices
-            +Type: list[str]
-        -genes_ids: List of genes to be used as vertices
-            +Type: list[str]
-        -phenotypes_links: List of phenotype-phenotype links to be used as edges
-            +Type: list[(str,str)]
-        -genotypes_links: List of genotype-genotype links to be used as edges
-            +Type: list[(str,str)]
-        -phenotypes_genes_links: List of phenotype-genes links to be used as edges
-            +Type: list[(str,str)]
-        -genotypes_genes_links: List of genotype-genes links to be used as edges
-            +Type: list[(str,str)]
-
-    Returns:
-        -paths_codes: Dictionary containing all path types and their frequency
-            +Type: dict{(str,int)}
-    """
-    p_id = argv[0]
-    g_id = argv[1]
-    phenotypes_ids = argv[2]
-    genotypes_ids = argv[3]
-    genes_ids = argv[4]
-    phenotypes_links = argv[5]
-    genotypes_links = argv[6]
-    phenotypes_genes_links = argv[7]
-    genotypes_genes_links = argv[8]
-    #Find the common genes of this pair
-    common_genes = [gene for gene in genes_ids if (p_id,gene) in phenotypes_genes_links \
-            and (g_id,gene) in genotypes_genes_links]
-    #Remove the links directly linking the source phenotype and the target genotype
-    phenotypes_genes_pruned_links = [i for i in phenotypes_genes_links \
-            if i[0]!= p_id or i[1] not in common_genes]
-    #Create the graph
-    #TODO: add directionality of graph as parameter
-    graph = build_graph(phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_pruned_links, genotypes_genes_links, undirected=True)
-    #Find all paths
-    paths = find_all_paths(graph, graph.vs.find(p_id).index, graph.vs.find(g_id).index,maxlen=4)
-    #Compute the type and frequency of all paths
-    paths_codes = {}
-    for current_path in paths:
-        current_code  = get_phenotype_genotype_path_code(graph,current_path,p_id,common_genes,g_id)
-        if current_code in paths_codes:
-            paths_codes[current_code]+=1
-        else:
-            paths_codes[current_code]=1
-    #Return the pair and their alternative paths
-    return p_id,g_id,paths_codes
-
 
 def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
@@ -357,8 +290,7 @@ def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
             #Remove the already computed ones
             p_genotypes = [x for x in p_genotypes if (p_id,x) not in list_elems]
         #However unlikely, there may be no disconnected genotypes with the current phenotype
-        if len(p_genotypes)==0:
-            continue
+        if len(p_genotypes)==0: continue
         #Launch the computation for each linked genotype
         print 'Going to compute',len(p_genotypes),'disconnected genotypes'
         #pool = Pool(cpu_count())
@@ -374,5 +306,69 @@ def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         #Merge list with previous results
         total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
         #Persist partial results
-        persist_alternative_paths(total_results, list_elems, type_index, disconnected = True)
+        persist_alternative_paths(total_results, list_elems, type_index,
+                                  total_results_path, list_elems_path, type_index_path)
     return
+
+def find_phenotype_genotype_alternative_paths(argv):
+#def find_paths(p_id, g_id, phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_links, genotypes_genes_links):
+    #TODO: Due to multiprocessing, parameters are passed within a list
+    #TODO: and unpacked here. This can be probably fixed.
+    """
+    Find all paths between a phenotype and a genotype which share a gene.
+    Return the number and type of paths without using the phenotype-shared_gene link.
+
+    Args:
+        -p_id: Phenotype source of the path
+            +Type: str
+        -g_id: Genotype target of the path
+            +Type: str
+        -phenotypes_ids: List of phenotypes to be used as vertices
+            +Type: list[str]
+        -genotypes_ids: List of genotypes to be used as vertices
+            +Type: list[str]
+        -genes_ids: List of genes to be used as vertices
+            +Type: list[str]
+        -phenotypes_links: List of phenotype-phenotype links to be used as edges
+            +Type: list[(str,str)]
+        -genotypes_links: List of genotype-genotype links to be used as edges
+            +Type: list[(str,str)]
+        -phenotypes_genes_links: List of phenotype-genes links to be used as edges
+            +Type: list[(str,str)]
+        -genotypes_genes_links: List of genotype-genes links to be used as edges
+            +Type: list[(str,str)]
+
+    Returns:
+        -paths_codes: Dictionary containing all path types and their frequency
+            +Type: dict{(str,int)}
+    """
+    p_id = argv[0]
+    g_id = argv[1]
+    phenotypes_ids = argv[2]
+    genotypes_ids = argv[3]
+    genes_ids = argv[4]
+    phenotypes_links = argv[5]
+    genotypes_links = argv[6]
+    phenotypes_genes_links = argv[7]
+    genotypes_genes_links = argv[8]
+    #Find the common genes of this pair
+    common_genes = [gene for gene in genes_ids if (p_id,gene) in phenotypes_genes_links \
+            and (g_id,gene) in genotypes_genes_links]
+    #Remove the links directly linking the source phenotype and the target genotype
+    phenotypes_genes_pruned_links = [i for i in phenotypes_genes_links \
+            if i[0]!= p_id or i[1] not in common_genes]
+    #Create the graph
+    #TODO: add directionality of graph as parameter
+    graph = build_graph(phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, genotypes_links, phenotypes_genes_pruned_links, genotypes_genes_links, undirected=True)
+    #Find all paths
+    paths = find_all_paths(graph, graph.vs.find(p_id).index, graph.vs.find(g_id).index,maxlen=4)
+    #Compute the type and frequency of all paths
+    paths_codes = {}
+    for current_path in paths:
+        current_code  = get_phenotype_genotype_path_code(graph,current_path,p_id,common_genes,g_id)
+        if current_code in paths_codes:
+            paths_codes[current_code]+=1
+        else:
+            paths_codes[current_code]=1
+    #Return the pair and their alternative paths
+    return p_id,g_id,paths_codes
