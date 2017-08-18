@@ -8,7 +8,7 @@ DONE: Top50 keeps growing beyond the max number of elements (remove last element
 DONE: In find_top_50_pairs: skip a pair if already in Top50 (and don't print list)
 
 extract_paths.py
-TODO: In persist_alternative_paths: consider case when overwriting files is not desirable
+DONE: In persist_alternative_paths: consider case when overwriting files is not desirable
 DONE: In persist_alternative_paths: avoid hardcoded paths (+ no "is disconnected" parameter)
 TODO: In find_phenotype_genotype_alternative_paths: fix multiprocessing issue (?)
 TODO: In find_phenotype_genotype_alternative_paths: add parameter for directionality of graph

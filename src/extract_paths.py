@@ -5,6 +5,8 @@ import numpy as np
 import cPickle as pickle # For Python 2.7
 # import _pickle as pickle # For Python 3
 import operator
+import os
+from os.path import exists
 
 def read_and_analyze_alternative_paths(total_results_path, type_index_path, list_elems_path):
     """
@@ -52,7 +54,8 @@ def read_and_analyze_alternative_paths(total_results_path, type_index_path, list
     print('-----------------------------')
 
 def persist_alternative_paths(total_results, list_elems, type_index,
-                              total_results_path, list_elems_path, type_index_path):
+                              total_results_path, list_elems_path,
+                              type_index_path, continuing=False):
     """
     Persists partial results on disk using numpy
 
@@ -70,11 +73,26 @@ def persist_alternative_paths(total_results, list_elems, type_index,
             +Type: str
         -type_index_path: path for storing type_index
             +Type: str
+        -continuing: Is this process a continuation of a partial execution?
+            +Type: bool
 
     Returns:
         None. Persists data.
     """
-    #TODO: files are currently overwritten. Consider when this may not be desirable
+    #If we are continuing a previous partial execution, the previous pickle dump becomes a backup
+    if continuing:
+        backup_total_results_path = total_results_path + ".bak"
+        backup_list_elems_path = list_elems_path + ".bak"
+        backup_type_index_path = type_index_path + ".bak"
+        #If there are already old backups, they are overwritten
+        if exists(backup_total_results_path): os.remove(backup_total_results_path)
+        if exists(backup_list_elems_path): os.remove(backup_list_elems_path)
+        if exists(backup_type_index_path): os.remove(backup_type_index_path)
+        #Turn the preexisting dump into the new backup
+        os.rename(total_results_path, backup_total_results_path)
+        os.rename(list_elems_path, backup_list_elems_path)
+        os.rename(type_index_path, backup_type_index_path)
+    #We then pickle dump the new results
     pickle.dump(total_results, open(total_results_path, "wb"))
     pickle.dump(list_elems, open(list_elems_path, "wb"))
     pickle.dump(type_index, open(type_index_path, "wb"))
@@ -218,7 +236,8 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
         #Persist partial results
         persist_alternative_paths(total_results, list_elems, type_index,
-                                  total_results_path, list_elems_path, type_index_path)
+                                  total_results_path, list_elems_path,
+                                  type_index_path, continuing)
     return
 
 def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
@@ -307,7 +326,8 @@ def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
         #Persist partial results
         persist_alternative_paths(total_results, list_elems, type_index,
-                                  total_results_path, list_elems_path, type_index_path)
+                                  total_results_path, list_elems_path,
+                                  type_index_path, continuing)
     return
 
 def find_phenotype_genotype_alternative_paths(argv):
