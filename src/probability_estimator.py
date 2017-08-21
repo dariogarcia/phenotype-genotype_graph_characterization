@@ -13,6 +13,8 @@ from multiprocessing import Pool, cpu_count
 from scipy.stats import norm
 from graph_methods import get_phenotype_genotype_path_code, find_all_paths
 import numpy as np
+import cPickle as pickle # For Python 2.7
+# import _pickle as pickle # For Python 3
 import operator
 import time
 

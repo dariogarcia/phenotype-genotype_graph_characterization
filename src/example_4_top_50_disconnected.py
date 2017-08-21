@@ -15,7 +15,8 @@ from probability_estimator import * # Both methods from the estimator are needed
 import random
 import signal
 import sys
-import pickle
+import cPickle as pickle # For Python 2.7
+# import _pickle as pickle # For Python 3
 
 
 class GracefulKiller:
@@ -73,6 +74,8 @@ class LinkedList:
         if (self.head is None) or (self.head.pair[1] < new_node.pair[1]):
             new_node.next = self.head
             self.head = new_node
+            curr_node = self.head
+            pair_was_added = True
             
         # Else check if the candidate should be added on a later position.
         else:
@@ -87,12 +90,13 @@ class LinkedList:
                 curr_node.next = new_node
                 pair_was_added = True
                 
-        # In any case, find the last node (limited by max length)
-        while (curr_pos < self.max_len) and (curr_node.next is not None):
-            curr_node = curr_node.next
-            curr_pos += 1
-        # Unreference any nodes that may follow (next node becomes None)
-        if curr_pos = self.max_len: curr_node.next = None
+        # In any case, if added, find the last node (limited by max length)
+        if pair_was_added:
+            while (curr_pos < self.max_len) and (curr_node.next is not None):
+                curr_node = curr_node.next
+                curr_pos += 1
+            # Unreference any nodes that may follow (next node becomes None)
+            if curr_pos == self.max_len: curr_node.next = None
         
         return pair_was_added
 

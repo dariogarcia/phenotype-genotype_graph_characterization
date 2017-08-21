@@ -15,7 +15,8 @@ from probability_estimator import * # Both methods from the estimator are needed
 import random
 import signal
 import sys
-import pickle
+import cPickle as pickle # For Python 2.7
+# import _pickle as pickle # For Python 3
 
 class GracefulKiller:
     """
@@ -118,6 +119,7 @@ def test_probability_estimator_connected(phenotypes_ids, genotypes_ids, genes_id
             # Estimate probabilities the phenotype-genotype pair
             prob_conn, prob_disc = estimate_probabilities(graph, common_genes, (p_id, g_id), statistics_conn, statistics_disc)
             prob_diff = prob_conn - prob_disc
+            print (p_id, g_id), prob_conn, prob_disc, prob_diff
             # Append the results to the probabilities_table
             probabilities_table.append(((p_id, g_id), prob_conn, prob_disc, prob_diff))
 
@@ -213,6 +215,7 @@ def test_probability_estimator_disconnected(phenotypes_ids, genotypes_ids, genes
             # Estimate probabilities the phenotype-genotype pair
             prob_conn, prob_disc = estimate_probabilities(graph, [], (p_id, g_id), statistics_conn, statistics_disc)
             prob_diff = prob_conn - prob_disc
+            print (p_id, g_id), prob_conn, prob_disc, prob_diff
             # Append the results to the probabilities_table
             probabilities_table.append(((p_id, g_id), prob_conn, prob_disc, prob_diff))
 
