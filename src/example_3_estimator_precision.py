@@ -19,6 +19,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import random
+import pickle
 
 def f_beta_score(precision, recall, beta=1):
     """

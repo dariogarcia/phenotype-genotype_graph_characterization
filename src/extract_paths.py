@@ -79,6 +79,7 @@ def persist_alternative_paths(total_results, list_elems, type_index,
     Returns:
         None. Persists data.
     """
+    #TODO: files are currently overwritten. Consider when this may not be desirable
     #If we are continuing a previous partial execution, the previous pickle dump becomes a backup
     if continuing:
         backup_total_results_path = total_results_path + ".bak"

@@ -15,6 +15,7 @@ from probability_estimator import * # Both methods from the estimator are needed
 import random
 import signal
 import sys
+import pickle
 
 class GracefulKiller:
     """
