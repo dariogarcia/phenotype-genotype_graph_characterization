@@ -1,0 +1,17 @@
+TODO LIST:
+
+example_4_top_50_disconnected.py
+DONE: Change imports with * (bad practice) with something more specific
+DONE: Rename Top50 and Top50_Node in more coherent terms (just a chained list with priority value)
+DONE: Make the size of Top50 parametrized
+DONE: Top50 keeps growing beyond the max number of elements (remove last element)
+DONE: In find_top_50_pairs: skip a pair if already in Top50 (and don't print list)
+
+extract_paths.py
+DONE: In persist_alternative_paths: consider case when overwriting files is not desirable
+DONE: In persist_alternative_paths: avoid hardcoded paths (+ no "is disconnected" parameter)
+TODO: In find_phenotype_genotype_alternative_paths: fix multiprocessing issue (?)
+TODO: In find_phenotype_genotype_alternative_paths: add parameter for directionality of graph
+
+onthology_parser.py
+DONE: In load_data: eliminate redundancy (and erase load_all_genes)

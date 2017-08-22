@@ -5,7 +5,7 @@ Methods return the ids of the elements in lists of strings (if elements)
 or lists of tuples (string,string) (if links).
 """
 
-from ontology_parser import *
+# from ontology_parser import * # This isn't used anywhere (yet)
 
 
 def load_genes_drugs_links(gen_dr_path, genes_ids):
