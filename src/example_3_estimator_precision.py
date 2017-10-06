@@ -180,6 +180,8 @@ print "Total disconnected (negative) =\t", shouldbe_neg_num
 print "---------------------------------------"
 print "True positives =\t", true_pos_num
 print "False positives =\t", false_pos_num
+print "True negatives =\t", true_neg_num
+print "False negatives =\t", false_neg_num
 print "---------------------------------------"
 print "Precision (conn) =\t", precision_conn
 print "Recall (conn) =\t\t", recall_conn
