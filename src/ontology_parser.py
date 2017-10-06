@@ -265,7 +265,10 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
         shared_genes.intersection_update(set([x[1] for x in dirty_genotype_gene_links]))
         genes_ids = list(shared_genes)
         #Remove phenotype_gene links which relate to genes not linked by both ontologies
-        phenotype_gene_links = [x for x in dirty_phenotype_gene_links if x[1] in genes_ids]
+        #This was needed to make sure that no phenotype-gene links existed with phenotypes
+        #that were not present in the phenotype ontology
+        phenotypes_tmp = load_phenotypes_ids(po_path)
+        phenotype_gene_links = [x for x in dirty_phenotype_gene_links if x[1] in genes_ids and x[0] in phenotypes_tmp]
         #Remove genotype_gene links which relate to genes not linked by both ontologies
         genotype_gene_links = [x for x in dirty_genotype_gene_links if x[1] in genes_ids]
     else:
