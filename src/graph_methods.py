@@ -76,6 +76,8 @@ def build_graph(phenotypes_ids, genotypes_ids, genes_ids, phenotypes_links, geno
             +Type: list[(str,str)]
         -genotypes_genes_links: List of genotype-genes links to be used as edges
             +Type: list[(str,str)]
+        -undirected: Determines the directionality of graph. (Directed or not?)
+            +Type: boolean
     Returns:
         -G: Built graph
             +Type: igraph graph

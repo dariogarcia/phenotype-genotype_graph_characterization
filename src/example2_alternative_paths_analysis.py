@@ -3,9 +3,10 @@ This file shows an example on how to process the alternative paths
 previously computed using "get_connected_phenotype_genotype_alternative_paths"
 """
 
-from ontology_parser import *
-from graph_methods import *
-from extract_paths import *
+# from graph_methods import * # This isn't used anymore
+from extract_paths import read_and_analyze_alternative_paths
+# from extract_paths import get_connected_phenotype_genotype_alternative_paths
+# from extract_paths import get_disconnected_phenotype_genotype_paths
 
 #This code assumes the alternative paths have already been computed (at least partially)
 #using the following method (see example1_loader.py for details)

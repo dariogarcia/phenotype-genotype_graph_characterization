@@ -1,10 +1,12 @@
 from multiprocessing import Pool, cpu_count
 import itertools
-from graph_methods import *
+from graph_methods import * # All of the methods are used
 import numpy as np
 import cPickle as pickle # For Python 2.7
 # import _pickle as pickle # For Python 3
 import operator
+import os
+from os.path import exists
 
 def read_and_analyze_alternative_paths(total_results_path, type_index_path, list_elems_path):
     """
@@ -51,7 +53,9 @@ def read_and_analyze_alternative_paths(total_results_path, type_index_path, list
         print(elem[0][0],'\t ',elem[1],'\t ',elem[2])
     print('-----------------------------')
 
-def persist_alternative_paths(total_results, list_elems, type_index, disconnected = False):
+def persist_alternative_paths(total_results, list_elems, type_index,
+                              total_results_path, list_elems_path,
+                              type_index_path, continuing=False):
     """
     Persists partial results on disk using numpy
 
@@ -63,24 +67,36 @@ def persist_alternative_paths(total_results, list_elems, type_index, disconnecte
             +Type: list[(phenotype_id ,genotype_id)]
         -type_index: dictionary of path type and column index
             +Type: dict{path_type, index}
-        -disconnected: the data corresponds to connected or disconnected pairs?
-            +Type: boolean
+        -total_results_path: path for storing total_results
+            +Type: str
+        -list_elems_path: path for storing list_elems
+            +Type: str
+        -type_index_path: path for storing type_index
+            +Type: str
+        -continuing: Is this process a continuation of a partial execution?
+            +Type: bool
 
     Returns:
         None. Persists data.
     """
     #TODO: files are currently overwritten. Consider when this may not be desirable
-    #TODO: hardcoded paths make jesus cry
-    #TODO: disconnected input paramter is uglier than yo mamma. Path a target path instead.
-    if not disconnected:
-        pickle.dump(total_results, open("../results/total_results.pkl", "wb"))
-        pickle.dump(list_elems, open("../results/list_elems.pkl", "wb"))
-        pickle.dump(type_index, open("../results/type_index.pkl", "wb"))
-    else:
-        pickle.dump(total_results, open("../results/total_results_disc.pkl", "wb"))
-        pickle.dump(list_elems, open("../results/list_elems_disc.pkl", "wb"))
-        pickle.dump(type_index, open("../results/type_index_disc.pkl", "wb"))
-    return
+    #If we are continuing a previous partial execution, the previous pickle dump becomes a backup
+    if continuing:
+        backup_total_results_path = total_results_path + ".bak"
+        backup_list_elems_path = list_elems_path + ".bak"
+        backup_type_index_path = type_index_path + ".bak"
+        #If there are already old backups, they are overwritten
+        if exists(backup_total_results_path): os.remove(backup_total_results_path)
+        if exists(backup_list_elems_path): os.remove(backup_list_elems_path)
+        if exists(backup_type_index_path): os.remove(backup_type_index_path)
+        #Turn the preexisting dump into the new backup
+        os.rename(total_results_path, backup_total_results_path)
+        os.rename(list_elems_path, backup_list_elems_path)
+        os.rename(type_index_path, backup_type_index_path)
+    #We then pickle dump the new results
+    pickle.dump(total_results, open(total_results_path, "wb"))
+    pickle.dump(list_elems, open(list_elems_path, "wb"))
+    pickle.dump(type_index, open(type_index_path, "wb"))
 
 def merge_alternative_paths(total_results, list_elems, type_index, partial_list):
     """
@@ -139,9 +155,9 @@ def merge_alternative_paths(total_results, list_elems, type_index, partial_list)
 def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
         phenotypes_genes_links, genotypes_genes_links, continuing=False,
-        total_results_path = '../results/total_results.pkl',
-        list_elems_path = '../results/list_elems.pkl',
-        type_index_path = '../results/type_index.pkl'):
+        total_results_path = '../results/old_versions/total_results.pkl',
+        list_elems_path = '../results/old_versions/list_elems.pkl',
+        type_index_path = '../results/old_versions/type_index.pkl'):
     """
     Given a list of genotypes and phenotypes, which may be linked through genes,
     for every linked genotype-phenotype pair find all the alternative paths
@@ -203,9 +219,8 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         else:
             p_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes
                 and (p_id,i[0]) not in list_elems]))
-        #Howver unlikely, there may be no connected genotypes with the current phenotype
-        if len(p_genotypes)==0:
-            continue
+        #However unlikely, there may be no connected genotypes with the current phenotype
+        if len(p_genotypes)==0: continue
         #Launch the computation for each linked genotype
         #pool = Pool(cpu_count())
         pool = Pool(2)
@@ -221,7 +236,99 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         #Merge list with previous results
         total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
         #Persist partial results
-        persist_alternative_paths(total_results, list_elems, type_index)
+        persist_alternative_paths(total_results, list_elems, type_index,
+                                  total_results_path, list_elems_path,
+                                  type_index_path, continuing)
+    return
+
+def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
+        genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
+        phenotypes_genes_links, genotypes_genes_links, continuing=False, 
+        total_results_path = '../results/old_versions/total_results_disc.pkl',
+        list_elems_path = '../results/old_versions/list_elems_disc.pkl',
+        type_index_path = '../results/old_versions/type_index_disc.pkl'):
+    """
+    Given a list of genotypes and phenotypes, find all the paths
+    for every genotype-phenotype pair not linked through a gene.
+    WARNING: This method is parallelized and will use all available CPUs.
+    WARNING: This method takes a while to compute (i.e., probably weeks).
+    For this reason, results are stored periodically on disc, and these are not returned.
+
+    Args:
+        -phenotypes_ids: List of phenotypes
+            +Type: list[str]
+        -genotypes_ids: List of genotypes
+            +Type: list[str]
+        -genes_ids: List of genes
+            +Type: list[str]
+        -phenotypes_links: List of phenotype-phenotype links
+            +Type: list[(str,str)]
+        -genotypes_links: List of genotype-genotype links
+            +Type: list[(str,str)]
+        -phenotypes_genes_links: List of phenotype-genes links
+            +Type: list[(str,str)]
+        -genotypes_genes_links: List of genotype-genes links
+            +Type: list[(str,str)]
+        -continuing: Is this process a continuation of a partial execution?
+            +Type: bool
+        -total_results_path: path to partial and previous total_results
+            +Type: str
+        -list_elems_path: path to partial and previous list_elems
+            +Type: str
+        -type_index_path: path to partial and previous type_index
+            +Type: str
+
+    Returns:
+        None (see previous Warning)
+    """
+    #Initialize structures
+    if not continuing:
+        list_elems = []
+        type_index = {}
+        total_results = np.empty([0,0])
+    #If we are continuing a previous partial execution
+    #load the precomputed values
+    else:
+        list_elems = pickle.load(open(list_elems_path,'rb'))
+        type_index = pickle.load(open(type_index_path,'rb'))
+        total_results = pickle.load(open(total_results_path,'rb'))
+        print 'Continuing from a previous computation'
+        print 'Total elements pre-computed:',len(list_elems)
+        print 'Total num. of different paths pre-found:',len(type_index)
+        print 'Data matrix shape:',total_results.shape
+    #For each phenotype
+    for p_id in phenotypes_ids:
+        #Get the list of linked genes
+        p_genes = list(set([i[1] for i in phenotypes_genes_links if i[0]==p_id]))
+        #And the list of unlinked genotypes
+        #...but first, find the linked genotypes
+        p_linked_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
+        #keep the rest
+        p_genotypes = list(set(genotypes_ids).difference(p_linked_genotypes))
+        #If we are continuing a previous partial execution avoid the already computed pairs
+        if continuing:
+            #Remove the already computed ones
+            p_genotypes = [x for x in p_genotypes if (p_id,x) not in list_elems]
+        #However unlikely, there may be no disconnected genotypes with the current phenotype
+        if len(p_genotypes)==0: continue
+        #Launch the computation for each linked genotype
+        print 'Going to compute',len(p_genotypes),'disconnected genotypes'
+        #pool = Pool(cpu_count())
+        pool = Pool(2)
+        partial_list = pool.map(find_phenotype_genotype_alternative_paths,\
+                itertools.izip(itertools.repeat(p_id), p_genotypes,\
+                itertools.repeat(phenotypes_ids), itertools.repeat(genotypes_ids),\
+                itertools.repeat(genes_ids), itertools.repeat(phenotypes_links),\
+                itertools.repeat(genotypes_links), itertools.repeat(phenotypes_genes_links),\
+                itertools.repeat(genotypes_genes_links)))
+        pool.close()
+        pool.join()
+        #Merge list with previous results
+        total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
+        #Persist partial results
+        persist_alternative_paths(total_results, list_elems, type_index,
+                                  total_results_path, list_elems_path,
+                                  type_index_path, continuing)
     return
 
 def find_phenotype_genotype_alternative_paths(argv):
@@ -286,93 +393,3 @@ def find_phenotype_genotype_alternative_paths(argv):
             paths_codes[current_code]=1
     #Return the pair and their alternative paths
     return p_id,g_id,paths_codes
-
-
-def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
-        genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
-        phenotypes_genes_links, genotypes_genes_links, continuing=False, 
-        total_results_path = '../results/total_results_disc.pkl',
-        list_elems_path = '../results/list_elems_disc.pkl',
-        type_index_path = '../results/type_index_disc.pkl'):
-    """
-    Given a list of genotypes and phenotypes, find all the paths
-    for every genotype-phenotype pair not linked through a gene.
-    WARNING: This method is parallelized and will use all available CPUs.
-    WARNING: This method takes a while to compute (i.e., probably weeks).
-    For this reason, results are stored periodically on disc, and these are not returned.
-
-    Args:
-        -phenotypes_ids: List of phenotypes
-            +Type: list[str]
-        -genotypes_ids: List of genotypes
-            +Type: list[str]
-        -genes_ids: List of genes
-            +Type: list[str]
-        -phenotypes_links: List of phenotype-phenotype links
-            +Type: list[(str,str)]
-        -genotypes_links: List of genotype-genotype links
-            +Type: list[(str,str)]
-        -phenotypes_genes_links: List of phenotype-genes links
-            +Type: list[(str,str)]
-        -genotypes_genes_links: List of genotype-genes links
-            +Type: list[(str,str)]
-        -continuing: Is this process a continuation of a partial execution?
-            +Type: bool
-        -total_results_path: path to partial and previous total_results
-            +Type: str
-        -list_elems_path: path to partial and previous list_elems
-            +Type: str
-        -type_index_path: path to partial and previous type_index
-            +Type: str
-
-    Returns:
-        None (see previous Warning)
-    """
-    #Initialize structures
-    if not continuing:
-        list_elems = []
-        type_index = {}
-        total_results = np.empty([0,0])
-    #If we are continuing a previous partial execution
-    #load the precomputed values
-    else:
-        list_elems = pickle.load(open(list_elems_path,'rb'))
-        type_index = pickle.load(open(type_index_path,'rb'))
-        total_results = pickle.load(open(total_results_path,'rb'))
-        print 'Continuing from a previous computation'
-        print 'Total elements pre-computed:',len(list_elems)
-        print 'Total num. of different paths pre-found:',len(type_index)
-        print 'Data matrix shape:',total_results.shape
-    #For each phenotype
-    for p_id in phenotypes_ids:
-        #Get the list of linked genes
-        p_genes = list(set([i[1] for i in phenotypes_genes_links if i[0]==p_id]))
-        #And the list of unlinked genotypes
-        #...but first, find the linked genotypes
-        p_linked_genotypes = list(set([i[0] for i in genotypes_genes_links if i[1] in p_genes]))
-        #keep the rest
-        p_genotypes = list(set(genotypes_ids).difference(p_linked_genotypes))
-        #If we are continuing a previous partial execution avoid the already computed pairs
-        if continuing:
-            #Remove the already computed ones
-            p_genotypes = [x for x in p_genotypes if (p_id,x) not in list_elems]
-        #However unlikely, there may be no disconnected genotypes with the current phenotype
-        if len(p_genotypes)==0:
-            continue
-        #Launch the computation for each linked genotype
-        print 'Going to compute',len(p_genotypes),'disconnected genotypes'
-        #pool = Pool(cpu_count())
-        pool = Pool(2)
-        partial_list = pool.map(find_phenotype_genotype_alternative_paths,\
-                itertools.izip(itertools.repeat(p_id), p_genotypes,\
-                itertools.repeat(phenotypes_ids), itertools.repeat(genotypes_ids),\
-                itertools.repeat(genes_ids), itertools.repeat(phenotypes_links),\
-                itertools.repeat(genotypes_links), itertools.repeat(phenotypes_genes_links),\
-                itertools.repeat(genotypes_genes_links)))
-        pool.close()
-        pool.join()
-        #Merge list with previous results
-        total_results, list_elems, type_index = merge_alternative_paths(total_results, list_elems, type_index, partial_list)
-        #Persist partial results
-        persist_alternative_paths(total_results, list_elems, type_index, disconnected = True)
-    return

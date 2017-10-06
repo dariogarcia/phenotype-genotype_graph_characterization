@@ -15,14 +15,12 @@ It also shows examples on how to:
 
 from __future__ import division
 from copy import deepcopy
-from ontology_parser import *
-from graph_methods import *
-from extract_paths import *
-from probability_estimator import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import random
+import cPickle as pickle # For Python 2.7
+# import _pickle as pickle # For Python 3
 
 def f_beta_score(precision, recall, beta=1):
     """
