@@ -35,9 +35,9 @@ print 'Found',len(go_gn_links,),'genotype_gene links'
 
 #Compute all alternative paths for connected phenotype-genotype pairs
 #print 'Computing alternative paths among connected pairs'
-#get_connected_phenotype_genotype_alternative_paths(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links, continuing=True)
+#get_connected_phenotype_genotype_alternative_paths(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links, continuing=False)
 
 #Compute all paths for non-connected phenotype-genotype pairs
-print 'Computing alternative paths among disconnected pairs'
-get_disconnected_phenotype_genotype_paths(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links, continuing=False)
+#print 'Computing alternative paths among disconnected pairs'
+#get_disconnected_phenotype_genotype_paths(phenotypes, genotypes, genes, ph_ph_links, go_go_links, ph_gn_links, go_gn_links, continuing=False)
 

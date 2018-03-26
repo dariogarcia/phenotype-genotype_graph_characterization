@@ -281,7 +281,7 @@ def load_data(po_path, go_path, ph_gen_path, go_gen_path, only_shared_genes=True
         genes_ids = list(shared_genes)
 
     if human_only:
-        human_only_terms = [x[0] for x in genotype_gene_links]
+        human_only_terms = list(set([x[0] for x in genotype_gene_links]))
         genotype_genotype_links = load_genotype_genotype_links(go_path)
         human_only_genotype_genotype_links = [x for x in genotype_genotype_links if x[0] in human_only_terms and x[1] in human_only_terms]
         return load_phenotypes_ids(po_path), human_only_terms, genes_ids, load_phenotype_phenotype_links(po_path), human_only_genotype_genotype_links, phenotype_gene_links, genotype_gene_links

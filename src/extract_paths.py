@@ -155,9 +155,9 @@ def merge_alternative_paths(total_results, list_elems, type_index, partial_list)
 def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
         phenotypes_genes_links, genotypes_genes_links, continuing=False,
-        total_results_path = '../results/old_versions/total_results.pkl',
-        list_elems_path = '../results/old_versions/list_elems.pkl',
-        type_index_path = '../results/old_versions/type_index.pkl'):
+        total_results_path = '../results/total_results.pkl',
+        list_elems_path = '../results/list_elems.pkl',
+        type_index_path = '../results/type_index.pkl'):
     """
     Given a list of genotypes and phenotypes, which may be linked through genes,
     for every linked genotype-phenotype pair find all the alternative paths
@@ -244,9 +244,9 @@ def get_connected_phenotype_genotype_alternative_paths(phenotypes_ids,\
 def get_disconnected_phenotype_genotype_paths(phenotypes_ids,\
         genotypes_ids, genes_ids, phenotypes_links, genotypes_links,\
         phenotypes_genes_links, genotypes_genes_links, continuing=False, 
-        total_results_path = '../results/old_versions/total_results_disc.pkl',
-        list_elems_path = '../results/old_versions/list_elems_disc.pkl',
-        type_index_path = '../results/old_versions/type_index_disc.pkl'):
+        total_results_path = '../results/total_results_disc.pkl',
+        list_elems_path = '../results/list_elems_disc.pkl',
+        type_index_path = '../results/type_index_disc.pkl'):
     """
     Given a list of genotypes and phenotypes, find all the paths
     for every genotype-phenotype pair not linked through a gene.
